@@ -179,7 +179,7 @@ def get_manufacturer_name(manufacturer_data):
             return manufacturer_codes.get(code, f"Unknown Manufacturer (Code: {code})")
     return "N/A"
 
-# Function to scan for devices and list them grouped by type
+# Function to scan for devices and list them grouped by type, excluding Apple devices
 async def scan_and_list_devices():
     devices = await BleakScanner.discover()
     categorized_devices = {
@@ -195,6 +195,11 @@ async def scan_and_list_devices():
         distance = estimate_distance(rssi) if isinstance(rssi, int) else 'N/A'
         manufacturer_data = advertisement_data.get("ManufacturerData", {})
         manufacturer_name = get_manufacturer_name(manufacturer_data)
+
+        # Skip Apple devices
+        if manufacturer_name == "Apple, Inc.":
+            continue
+
         device_type = categorize_device(device.name)
         categorized_devices[device_type].append((device.name, device.address, rssi, distance, manufacturer_name))
 
