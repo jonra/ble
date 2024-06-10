@@ -9,11 +9,12 @@ async def explore_device(address):
             await client.connect()
             services = client.services
             for service in services:
-                print(f"Service: {service.uuid}, Description: {service.description}")
+                print(f"  Service: {service.uuid}, Description: {service.description}")
                 for char in service.characteristics:
-                    print(f"  Characteristic: {char.uuid}, Properties: {char.properties}")
-    except BleakError as e:
-        print(f"Failed to connect to device at {address}: {e}")
+                    print(f"    Characteristic: {char.uuid}, Properties: {char.properties}")
+    except BleakError:
+        # Suppress the error and continue
+        pass
 
 # Function to identify if a device is a Heart Rate Monitor
 async def identify_heart_rate_monitor(address):
@@ -26,8 +27,8 @@ async def identify_heart_rate_monitor(address):
                     print(f"Heart Rate Monitor identified at address: {address}")
                     return True
         return False
-    except BleakError as e:
-        print(f"Failed to connect to device at {address}: {e}")
+    except BleakError:
+        # Suppress the error and continue
         return False
 
 # Function to scan for devices and identify their types
@@ -35,7 +36,7 @@ async def scan_and_identify():
     devices = await BleakScanner.discover()
     for device in devices:
         rssi = device.metadata.get('rssi', 'N/A')
-        print(f"Scanning {device.name}, Address: {device.address}, RSSI: {rssi}")
+        print(f"Device: {device.name}, Address: {device.address}, RSSI: {rssi}")
         if await identify_heart_rate_monitor(device.address):
             continue
         else:
