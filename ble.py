@@ -1,53 +1,38 @@
 import asyncio
-from bleak import BleakScanner
-import nest_asyncio
+from bleak import BleakScanner, BleakClient
 
-# Apply the nest_asyncio patch to allow nested event loops
-nest_asyncio.apply()
+# Function to explore services and characteristics of a device
+async def explore_device(address):
+    async with BleakClient(address) as client:
+        services = await client.get_services()
+        for service in services:
+            print(f"Service: {service.uuid}, Description: {service.description}")
+            for char in service.characteristics:
+                print(f"  Characteristic: {char.uuid}, Properties: {char.properties}")
+                for descriptor in char.descriptors:
+                    print(f"    Descriptor: {descriptor.uuid}, Value: {await client.read_gatt_descriptor(descriptor.handle)}")
 
-def estimate_distance(rssi, tx_power=-59, n=2):
-    """
-    Estimate the distance to a BLE device based on the RSSI value.
-    Args:
-    - rssi: The RSSI value
-    - tx_power: The TxPower value at 1 meter (default is -59 dBm)
-    - n: The path-loss exponent (default is 2, typical for free space)
-    Returns:
-    - Estimated distance in meters
-    """
-    return 10 ** ((tx_power - rssi) / (10 * n))
+# Function to identify if a device is a Heart Rate Monitor
+async def identify_heart_rate_monitor(address):
+    async with BleakClient(address) as client:
+        services = await client.get_services()
+        for service in services:
+            if service.uuid == "0000180d-0000-1000-8000-00805f9b34fb":
+                print("Heart Rate Monitor found!")
+                return True
+        return False
 
-async def scan_for_ble_devices(scan_duration=1, retries=3):
-    devices = []
-    for _ in range(retries):
-        found_devices = await BleakScanner.discover(timeout=scan_duration)
-        devices.extend(found_devices)
-        # Use set to remove duplicates based on address
-        devices = list({device.address: device for device in devices}.values())
-        # If you have a specific device to look for, you can filter by its address
-        # e.g., if target_device_address in [device.address for device in devices]:
-        #     break
+# Function to scan for devices and identify their types
+async def scan_and_identify():
+    devices = await BleakScanner.discover()
+    for device in devices:
+        print(f"Scanning {device.name}, Address: {device.address}, RSSI: {device.rssi}")
+        if await identify_heart_rate_monitor(device.address):
+            print(f"Heart Rate Monitor identified: {device.name}, Address: {device.address}")
+        else:
+            await explore_device(device.address)
 
-        # for device in devices:
-        #     # print(device)
-        #     if device.metadata.get(76):
-        #         distance = estimate_distance(device.rssi)
-        #         print(f"Device: {device.name or 'Unknown'}, Manufacturer: {device.metadata.get('manufacturer_data', {})}, Address: {device.address}, RSSI: {device.rssi}, Estimated Distance: {distance:.2f} meters")
-        for device in devices:
-            # print(f"Device: {device.name or 'Unknown'}, Manufacturer Data: {device.metadata.get('manufacturer_data', {})}, Address: {device.address}, RSSI: {device.rssi}")
-
-            # Get the manufacturer data dictionary
-            manufacturer_data = device.metadata.get('manufacturer_data', {})
-
-            # Check if the manufacturer data contains key 76
-            if 76 in manufacturer_data:
-                distance = estimate_distance(device.rssi)
-                print(f"Identified Device with key 76: {device.name or 'Unknown'}, Address: {device.address}, RSSI: {device.rssi}, Estimated Distance: {distance:.2f} meters")
-
-
-def run_ble_scan(scan_duration=2, retries=3):
-    loop = asyncio.get_event_loop()
-    loop.run_until_complete(scan_for_ble_devices(scan_duration, retries))
-
+# Main function to run the scanning and identification
 if __name__ == "__main__":
-    run_ble_scan()
+    loop = asyncio.get_event_loop()
+    loop.run_until_complete(scan_and_identify())
