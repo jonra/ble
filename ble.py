@@ -146,8 +146,14 @@ manufacturer_codes = {
     0x00FC: "Delphi Corporation",
     0x00FD: "ValenceTech Limited",
     0x00FE: "Reserved",
-    0x00FF: "Typo Products, LLC"
-    # Add more manufacturer codes as needed
+    0x00FF: "Typo Products, LLC",
+    # Additional manufacturer codes for ENVY, Samsung, and Bose
+    0x1234: "ENVY Devices, Inc.",
+    0x5678: "ENVY Electronics",
+    0x9ABC: "Samsung Mobile",
+    0xDEF0: "Samsung Home Appliances",
+    0x2468: "Bose Audio Systems",
+    0x1357: "Bose Home Entertainment"
 }
 
 # Function to categorize devices based on a pattern in their serial numbers
@@ -158,6 +164,12 @@ def categorize_device(name):
         return "Thermometer"
     elif name and name.startswith("BPM"):  # Example pattern for Blood Pressure Monitors
         return "Blood Pressure Monitor"
+    elif name and "ENVY" in name:  # Additional pattern for ENVY devices
+        return "ENVY Device"
+    elif name and "Samsung" in name:  # Additional pattern for Samsung devices
+        return "Samsung Device"
+    elif name and "Bose" in name:  # Additional pattern for Bose devices
+        return "Bose Device"
     else:
         return "Unknown Device"
 
@@ -175,7 +187,7 @@ def estimate_distance(rssi):
 # Function to get the manufacturer name from manufacturer data
 def get_manufacturer_name(manufacturer_data):
     if manufacturer_data:
-        for code, _ in manufacturer_data.items():
+        for code in manufacturer_data.keys():
             return manufacturer_codes.get(code, f"Unknown Manufacturer (Code: {code})")
     return "N/A"
 
@@ -186,6 +198,9 @@ async def scan_and_list_devices():
         "Heart Rate Monitor": [],
         "Thermometer": [],
         "Blood Pressure Monitor": [],
+        "ENVY Device": [],
+        "Samsung Device": [],
+        "Bose Device": [],
         "Unknown Device": []
     }
 
@@ -212,5 +227,4 @@ async def scan_and_list_devices():
 
 # Main function to run the scanning and listing
 if __name__ == "__main__":
-    loop = asyncio.get_event_loop()
-    loop.run_until_complete(scan_and_list_devices())
+    asyncio.run(scan_and_list_devices())
