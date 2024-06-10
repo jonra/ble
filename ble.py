@@ -34,8 +34,7 @@ def estimate_distance(rssi):
         return (0.89976 * (ratio ** 7.7095)) + 0.111
 
 # Function to get the manufacturer name from manufacturer data
-def get_manufacturer_name(advertisement_data):
-    manufacturer_data = advertisement_data.manufacturer_data
+def get_manufacturer_name(manufacturer_data):
     if manufacturer_data:
         for code, _ in manufacturer_data.items():
             return manufacturer_codes.get(code, f"Unknown Manufacturer (Code: {code})")
@@ -52,10 +51,11 @@ async def scan_and_list_devices():
     }
 
     for device in devices:
-        rssi = device.rssi
-        distance = estimate_distance(rssi) if isinstance(rssi, int) else 'N/A'
         advertisement_data = device.details.get("props", {})
-        manufacturer_name = get_manufacturer_name(advertisement_data)
+        rssi = advertisement_data.get('RSSI', 'N/A')
+        distance = estimate_distance(rssi) if isinstance(rssi, int) else 'N/A'
+        manufacturer_data = advertisement_data.get("ManufacturerData", {})
+        manufacturer_name = get_manufacturer_name(manufacturer_data)
         device_type = categorize_device(device.name)
         categorized_devices[device_type].append((device.name, device.address, rssi, distance, manufacturer_name))
 
