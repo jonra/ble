@@ -1,25 +1,34 @@
 import asyncio
 from bleak import BleakScanner, BleakClient
+from bleak.exc import BleakError
 
 # Function to explore services and characteristics of a device
 async def explore_device(address):
-    async with BleakClient(address) as client:
-        services = await client.get_services()
-        for service in services:
-            print(f"Service: {service.uuid}, Description: {service.description}")
-            for char in service.characteristics:
-                print(f"  Characteristic: {char.uuid}, Properties: {char.properties}")
-                for descriptor in char.descriptors:
-                    print(f"    Descriptor: {descriptor.uuid}, Value: {await client.read_gatt_descriptor(descriptor.handle)}")
+    try:
+        async with BleakClient(address) as client:
+            services = client.services
+            for service in services:
+                print(f"Service: {service.uuid}, Description: {service.description}")
+                for char in service.characteristics:
+                    print(f"  Characteristic: {char.uuid}, Properties: {char.properties}")
+                    for descriptor in char.descriptors:
+                        value = await client.read_gatt_descriptor(descriptor.handle)
+                        print(f"    Descriptor: {descriptor.uuid}, Value: {value}")
+    except BleakError as e:
+        print(f"Failed to connect to device at {address}: {e}")
 
 # Function to identify if a device is a Heart Rate Monitor
 async def identify_heart_rate_monitor(address):
-    async with BleakClient(address) as client:
-        services = await client.get_services()
-        for service in services:
-            if service.uuid == "0000180d-0000-1000-8000-00805f9b34fb":
-                print("Heart Rate Monitor found!")
-                return True
+    try:
+        async with BleakClient(address) as client:
+            services = client.services
+            for service in services:
+                if service.uuid == "0000180d-0000-1000-8000-00805f9b34fb":
+                    print("Heart Rate Monitor found!")
+                    return True
+        return False
+    except BleakError as e:
+        print(f"Failed to connect to device at {address}: {e}")
         return False
 
 # Function to scan for devices and identify their types
