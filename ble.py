@@ -1,48 +1,39 @@
 import asyncio
-from bleak import BleakScanner, BleakClient
-from bleak.exc import BleakError
+from bleak import BleakScanner
 
-# Function to explore services and characteristics of a device
-async def explore_device(address):
-    try:
-        async with BleakClient(address) as client:
-            await client.connect()
-            services = client.services
-            for service in services:
-                print(f"  Service: {service.uuid}, Description: {service.description}")
-                for char in service.characteristics:
-                    print(f"    Characteristic: {char.uuid}, Properties: {char.properties}")
-    except BleakError:
-        # Suppress the error and continue
-        pass
+# Function to categorize devices based on a pattern in their serial numbers
+def categorize_device(name):
+    if name.startswith("HRM"):  # Example pattern for Heart Rate Monitors
+        return "Heart Rate Monitor"
+    elif name.startswith("TMP"):  # Example pattern for Thermometers
+        return "Thermometer"
+    elif name.startswith("BPM"):  # Example pattern for Blood Pressure Monitors
+        return "Blood Pressure Monitor"
+    else:
+        return "Unknown Device"
 
-# Function to identify if a device is a Heart Rate Monitor
-async def identify_heart_rate_monitor(address):
-    try:
-        async with BleakClient(address) as client:
-            await client.connect()
-            services = client.services
-            for service in services:
-                if service.uuid == "0000180d-0000-1000-8000-00805f9b34fb":
-                    print(f"Heart Rate Monitor identified at address: {address}")
-                    return True
-        return False
-    except BleakError:
-        # Suppress the error and continue
-        return False
-
-# Function to scan for devices and identify their types
-async def scan_and_identify():
+# Function to scan for devices and list them grouped by type
+async def scan_and_list_devices():
     devices = await BleakScanner.discover()
+    categorized_devices = {
+        "Heart Rate Monitor": [],
+        "Thermometer": [],
+        "Blood Pressure Monitor": [],
+        "Unknown Device": []
+    }
+
     for device in devices:
         rssi = device.metadata.get('rssi', 'N/A')
-        print(f"Device: {device.name}, Address: {device.address}, RSSI: {rssi}")
-        if await identify_heart_rate_monitor(device.address):
-            continue
-        else:
-            await explore_device(device.address)
+        device_type = categorize_device(device.name)
+        categorized_devices[device_type].append((device.name, device.address, rssi))
 
-# Main function to run the scanning and identification
+    for category, devices in categorized_devices.items():
+        print(f"{category}:")
+        for name, address, rssi in devices:
+            print(f"  Name: {name}, Address: {address}, RSSI: {rssi}")
+        print()
+
+# Main function to run the scanning and listing
 if __name__ == "__main__":
     loop = asyncio.get_event_loop()
-    loop.run_until_complete(scan_and_identify())
+    loop.run_until_complete(scan_and_list_devices())
