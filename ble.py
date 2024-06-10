@@ -1,13 +1,23 @@
 import asyncio
 from bleak import BleakScanner
 
+# Manufacturer codes dictionary
+manufacturer_codes = {
+    0x004C: "Apple, Inc.",
+    0x0006: "Microsoft",
+    0x000F: "Broadcom Corporation",
+    0x089A: "Teltonika",
+    0xFD57: "Volvo"
+    # Add more manufacturer codes as needed
+}
+
 # Function to categorize devices based on a pattern in their serial numbers
 def categorize_device(name):
-    if name.startswith("HRM"):  # Example pattern for Heart Rate Monitors
+    if name and name.startswith("HRM"):  # Example pattern for Heart Rate Monitors
         return "Heart Rate Monitor"
-    elif name.startswith("TMP"):  # Example pattern for Thermometers
+    elif name and name.startswith("TMP"):  # Example pattern for Thermometers
         return "Thermometer"
-    elif name.startswith("BPM"):  # Example pattern for Blood Pressure Monitors
+    elif name and name.startswith("BPM"):  # Example pattern for Blood Pressure Monitors
         return "Blood Pressure Monitor"
     else:
         return "Unknown Device"
@@ -23,6 +33,13 @@ def estimate_distance(rssi):
     else:
         return (0.89976 * (ratio ** 7.7095)) + 0.111
 
+# Function to get the manufacturer name from manufacturer data
+def get_manufacturer_name(manufacturer_data):
+    if manufacturer_data:
+        for code in manufacturer_data.keys():
+            return manufacturer_codes.get(code, f"Unknown Manufacturer (Code: {code})")
+    return "N/A"
+
 # Function to scan for devices and list them grouped by type
 async def scan_and_list_devices():
     devices = await BleakScanner.discover()
@@ -34,16 +51,18 @@ async def scan_and_list_devices():
     }
 
     for device in devices:
-        rssi = device.metadata.get('rssi', 'N/A')
+        rssi = device.rssi
         distance = estimate_distance(rssi) if isinstance(rssi, int) else 'N/A'
-        raw_data = device.details.get('props', {}).get('ManufacturerData', 'N/A')
+        manufacturer_data = device.metadata.get('ManufacturerData', {})
+        manufacturer_name = get_manufacturer_name(manufacturer_data)
         device_type = categorize_device(device.name)
-        categorized_devices[device_type].append((device.name, device.address, rssi, distance, raw_data))
+        categorized_devices[device_type].append((device.name, device.address, rssi, distance, manufacturer_name))
 
     for category, devices in categorized_devices.items():
         print(f"{category}:")
-        for name, address, rssi, distance, raw_data in devices:
-            print(f"  Name: {name}, Address: {address}, RSSI: {rssi}, Distance: {distance:.2f} meters, Raw Data: {raw_data}")
+        for name, address, rssi, distance, manufacturer_name in devices:
+            distance_str = f"{distance:.2f} meters" if isinstance(distance, float) else distance
+            print(f"  Name: {name}, Address: {address}, RSSI: {rssi}, Distance: {distance_str}, Manufacturer: {manufacturer_name}")
         print()
 
 # Main function to run the scanning and listing
