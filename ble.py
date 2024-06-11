@@ -1,5 +1,5 @@
 import requests
-import asyncio
+import time
 import json
 from bleak import BleakScanner
 from datetime import datetime
@@ -104,8 +104,8 @@ def get_device_uuid():
         return "Unknown"
 
 # Function to scan for devices and list them grouped by type, excluding Apple devices
-async def scan_and_list_devices():
-    devices = await BleakScanner.discover()
+def scan_and_list_devices():
+    devices = BleakScanner.discover()
     flattened_devices = []
 
     for device in devices:
@@ -117,7 +117,7 @@ async def scan_and_list_devices():
 
         # Skip devices with specific manufacturer names or name patterns
         if manufacturer_name in ["Apple, Inc.", "Microsoft"] or \
-                any(x in device.name for x in ["Microsoft", "Lynk", "Samsung", "ENVY", "Bose"]):
+                any(x in device.name for x in ["Microsoft", "Lynk", "Samsung"]):
             continue
 
         device_type = categorize_device(device.name)
@@ -140,14 +140,14 @@ async def scan_and_list_devices():
     }
 
     # Send JSON structure to the webhook
-    response = requests.post("https://ble-listener-286f94459e57.herokuapp.com/api/devices", json=result)
+    response = requests.post("https://zealous-queen-17.webhook.cool", json=result)
     print(f"Posted data to webhook, response status: {response.status_code}")
 
-# Main function to run the scanning and listing every 5 seconds
-async def main():
+# Main function to run the scanning and listing every 2 seconds
+def main():
     while True:
-        await scan_and_list_devices()
-        await asyncio.sleep(2)
+        scan_and_list_devices()
+        # time.sleep(5)
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    main()
