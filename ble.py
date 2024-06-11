@@ -26,6 +26,7 @@ manufacturer_codes.update(manufacturer_codes_4)
 manufacturer_codes.update(manufacturer_codes_5)
 manufacturer_codes.update(manufacturer_codes_6)
 manufacturer_codes.update(manufacturer_codes_7)
+
 # Function to categorize devices based on a pattern in their serial numbers
 def categorize_device(name):
     if name and name.startswith("HRM"):  # Example pattern for Heart Rate Monitors
@@ -115,10 +116,12 @@ def get_connection_metadata():
 
 # Function to scan for devices and list them grouped by type, excluding specific devices
 async def scan_and_list_devices():
+    print("Starting Bluetooth scan...")
     devices = await BleakScanner.discover()
     flattened_devices = []
 
     for device in devices:
+        print(f"Device found: {device.name}, Address: {device.address}")
         advertisement_data = device.details.get("props", {})
         rssi = advertisement_data.get('RSSI', 'N/A')
         distance = estimate_distance(rssi) if isinstance(rssi, int) else 'N/A'
@@ -143,6 +146,11 @@ async def scan_and_list_devices():
             "category": device_type  # Add category as a field
         })
 
+    if not flattened_devices:
+        print("No devices found during the scan.")
+    else:
+        print(f"Found {len(flattened_devices)} devices.")
+
     connection_metadata = get_connection_metadata()
     result = {
         "timestamp": datetime.now().isoformat(),
@@ -156,9 +164,14 @@ async def scan_and_list_devices():
         "devices": flattened_devices
     }
 
+    print("Collected Data: ", json.dumps(result, indent=2))  # Print the collected data for debugging
+
     # Send JSON structure to the webhook
-    response = requests.post("https://ble-listener-286f94459e57.herokuapp.com/api/devices", json=result)
-    print(f"Posted data to webhook, response status: {response.status_code}")
+    try:
+        response = requests.post("https://ble-listener-286f94459e57.herokuapp.com/api/devices", json=result)
+        print(f"Posted data to webhook, response status: {response.status_code}")
+    except Exception as e:
+        print(f"Error posting data to webhook: {e}")
 
 # Main function to run the scanning and listing every 5 seconds
 async def main():
