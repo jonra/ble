@@ -122,8 +122,8 @@ def scan_and_list_devices():
 
     for device in devices:
         advertisement_data = device.details.get("props", {})
-        rssi = advertisement_data.get('RSSI', 'N/A')
-        distance = estimate_distance(rssi) if isinstance(rssi, int) else 'N/A'
+        rssi = advertisement_data.get('RSSI', '999')
+        distance = estimate_distance(rssi) if isinstance(rssi, int) else '999'
         manufacturer_data = advertisement_data.get("ManufacturerData", {})
         manufacturer_name = get_manufacturer_name(manufacturer_data)
 
