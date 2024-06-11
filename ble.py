@@ -116,7 +116,7 @@ def get_device_uuid():
 # Function to scan for devices and list them grouped by type, excluding Apple devices
 async def scan_and_list_devices():
     try:
-        devices = await BleakScanner.discover(timeout=10.0)  # Set a timeout of 10 seconds
+        devices = await BleakScanner.discover(timeout=3.0)  # Set a timeout of 10 seconds
     except BleakError as e:
         print(f"Error during Bluetooth scan: {e}")
         return
