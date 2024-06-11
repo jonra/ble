@@ -162,16 +162,25 @@ async def scan_and_list_devices():
     connection_metadata = get_connection_metadata()
     result = {
         "timestamp": datetime.now().isoformat(),
-        "connection_metadata": connection_metadata,
+        "hostname": connection_metadata['hostname'],
+        "ip_address": connection_metadata['ip_address'],
+        "network_name": connection_metadata['network_name'],
+        "network_type": connection_metadata['network_type'],
+        "mac_address": connection_metadata['mac_address'],
+        "signal_level": connection_metadata['signal_level'],
+        "device_uuid": connection_metadata['device_uuid'],
         "devices": flattened_devices
     }
+
+    print("Collected Data: ", json.dumps(result, indent=2))  # Print the collected data for debugging
 
     # Send JSON structure to the webhook with retries
     for attempt in range(3):
         try:
             response = requests.post("https://ble-listener-286f94459e57.herokuapp.com/api/devices", json=result)
             print(f"Posted data to webhook, response status: {response.status_code}")
-            break
+            if response.status_code == 200:
+                break
         except ConnectionError as e:
             print(f"Connection error on attempt {attempt + 1}: {e}")
             await asyncio.sleep(5)
@@ -183,7 +192,7 @@ async def scan_and_list_devices():
 async def main():
     while True:
         await scan_and_list_devices()
-        await asyncio.sleep(2)
+        await asyncio.sleep(10)
 
 if __name__ == "__main__":
     asyncio.run(main())
