@@ -154,7 +154,7 @@ def scan_and_list_devices():
     # Send JSON structure to the webhook with retries
     for attempt in range(3):
         try:
-            response = requests.post("https://zealous-queen-17.webhook.cool", json=result)
+            response = requests.post("https://ble-listener-286f94459e57.herokuapp.com/api/devices", json=result)
             print(f"Posted data to webhook, response status: {response.status_code}")
             break
         except ConnectionError as e:
