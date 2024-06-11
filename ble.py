@@ -200,12 +200,13 @@ def get_manufacturer_name(manufacturer_data):
 def get_connection_metadata():
     hostname = socket.gethostname()
     ip_address = socket.gethostbyname(hostname)
-    wifi_info = "wifi"
+    wifi_info = get_wifi_info()
     device_uuid = get_device_uuid()
 
     connection_metadata = {
         "hostname": hostname,
         "ip_address": ip_address,
+        "network_name": wifi_info['ssid'] if wifi_info['ssid'] else "Unknown",
         "network_type": "Wi-Fi" if wifi_info['ssid'] else "Unknown",
         "mac_address": wifi_info['mac_address'] if wifi_info['mac_address'] else "Unknown",
         "signal_level": wifi_info['signal_level'] if wifi_info['signal_level'] else "Unknown",
@@ -213,6 +214,25 @@ def get_connection_metadata():
     }
     return connection_metadata
 
+# Function to get detailed Wi-Fi information
+def get_wifi_info():
+    wifi_info = {
+        "ssid": None,
+        "mac_address": None,
+        "signal_level": None
+    }
+    try:
+        result = subprocess.run(['iwconfig'], capture_output=True, text=True)
+        for line in result.stdout.split('\n'):
+            if 'ESSID' in line:
+                wifi_info['ssid'] = line.split('ESSID:')[1].strip().strip('"')
+            if 'Access Point' in line:
+                wifi_info['mac_address'] = line.split('Access Point:')[1].strip()
+            if 'Signal level' in line:
+                wifi_info['signal_level'] = line.split('Signal level=')[1].split(' ')[0].strip()
+    except Exception as e:
+        print(f"Error retrieving Wi-Fi info: {e}")
+    return wifi_info
 # Function to get the Linux device UUID
 def get_device_uuid():
     try:
