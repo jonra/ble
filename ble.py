@@ -1,5 +1,4 @@
 import requests
-import time
 import json
 from bleak import BleakScanner, BleakError
 from datetime import datetime
