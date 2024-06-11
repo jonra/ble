@@ -19,6 +19,8 @@ manufacturer_codes_7 = {
     0x019F: "ON Semiconductor",
     0x01A0: "NXP Semiconductors",
     0x01A1: "Infineon Technologies",
-    0x01A2: "Lattice Semiconductor"
+    0x01A2: "Lattice Semiconductor",
+    0x1447: "Silicon Laboratories (Silabs)",
+    0x7427: "Abovelink Technology Co., Ltd.",
+    0x7171: "Sure-Fi Inc."
 }
-
