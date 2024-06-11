@@ -1,12 +1,12 @@
 import requests
 import asyncio
 import json
+import subprocess
 from bleak import BleakScanner
 from datetime import datetime
 import uuid
 import socket
 
-# Manufacturer codes dictionary (truncated for brevity)
 # Import manufacturer codes from the external file
 from manufacturer_codes import manufacturer_codes
 
@@ -45,24 +45,6 @@ def get_manufacturer_name(manufacturer_data):
             return manufacturer_codes.get(code, f"Unknown Manufacturer (Code: {code})")
     return "N/A"
 
-# Function to get internet connection metadata
-def get_connection_metadata():
-    hostname = socket.gethostname()
-    ip_address = socket.gethostbyname(hostname)
-    wifi_info = get_wifi_info()
-    device_uuid = get_device_uuid()
-
-    connection_metadata = {
-        "hostname": hostname,
-        "ip_address": ip_address,
-        "network_name": wifi_info['ssid'] if wifi_info['ssid'] else "Unknown",
-        "network_type": "Wi-Fi" if wifi_info['ssid'] else "Unknown",
-        "mac_address": wifi_info['mac_address'] if wifi_info['mac_address'] else "Unknown",
-        "signal_level": wifi_info['signal_level'] if wifi_info['signal_level'] else "Unknown",
-        "device_uuid": device_uuid
-    }
-    return connection_metadata
-
 # Function to get detailed Wi-Fi information
 def get_wifi_info():
     wifi_info = {
@@ -82,6 +64,7 @@ def get_wifi_info():
     except Exception as e:
         print(f"Error retrieving Wi-Fi info: {e}")
     return wifi_info
+
 # Function to get the Linux device UUID
 def get_device_uuid():
     try:
@@ -90,7 +73,26 @@ def get_device_uuid():
     except Exception as e:
         print(f"Error retrieving device UUID: {e}")
         return "Unknown"
-# Function to scan for devices and list them grouped by type, excluding Apple devices
+
+# Function to get internet connection metadata
+def get_connection_metadata():
+    hostname = socket.gethostname()
+    ip_address = socket.gethostbyname(hostname)
+    wifi_info = get_wifi_info()
+    device_uuid = get_device_uuid()
+
+    connection_metadata = {
+        "hostname": hostname,
+        "ip_address": ip_address,
+        "network_name": wifi_info['ssid'] if wifi_info['ssid'] else "Unknown",
+        "network_type": "Wi-Fi" if wifi_info['ssid'] else "Unknown",
+        "mac_address": wifi_info['mac_address'] if wifi_info['mac_address'] else "Unknown",
+        "signal_level": wifi_info['signal_level'] if wifi_info['signal_level'] else "Unknown",
+        "device_uuid": device_uuid
+    }
+    return connection_metadata
+
+# Function to scan for devices and list them grouped by type, excluding specific devices
 async def scan_and_list_devices():
     devices = await BleakScanner.discover()
     flattened_devices = []
@@ -122,7 +124,13 @@ async def scan_and_list_devices():
     connection_metadata = get_connection_metadata()
     result = {
         "timestamp": datetime.now().isoformat(),
-        "connection_metadata": connection_metadata,
+        "hostname": connection_metadata["hostname"],
+        "ip_address": connection_metadata["ip_address"],
+        "network_name": connection_metadata["network_name"],
+        "network_type": connection_metadata["network_type"],
+        "mac_address": connection_metadata["mac_address"],
+        "signal_level": connection_metadata["signal_level"],
+        "device_uuid": connection_metadata["device_uuid"],
         "devices": flattened_devices
     }
 
