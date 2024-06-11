@@ -115,10 +115,22 @@ def get_device_uuid():
 
 # Function to scan for devices and list them grouped by type, excluding Apple devices
 async def scan_and_list_devices():
-    try:
-        devices = await BleakScanner.discover()
-    except BleakError as e:
-        print(f"Error during Bluetooth scan: {e}")
+    attempt = 0
+    while attempt < 3:
+        try:
+            devices = await BleakScanner.discover(timeout=10.0)  # Set a timeout of 10 seconds
+            break
+        except BleakError as e:
+            if 'InProgress' in str(e):
+                print(f"Scan in progress, retrying in 5 seconds... (Attempt {attempt + 1})")
+                await asyncio.sleep(5)
+                attempt += 1
+            else:
+                print(f"Error during Bluetooth scan: {e}")
+                return
+
+    if attempt == 3:
+        print("Failed to complete scan after 3 attempts.")
         return
 
     flattened_devices = []
@@ -162,15 +174,16 @@ async def scan_and_list_devices():
             break
         except ConnectionError as e:
             print(f"Connection error on attempt {attempt + 1}: {e}")
-            time.sleep(5)
+            await asyncio.sleep(5)
         except Exception as e:
             print(f"An error occurred on attempt {attempt + 1}: {e}")
-            time.sleep(5)
+            await asyncio.sleep(5)
 
-# Main function to run the scanning and listing every 5 seconds
-def main():
+# Main function to run the scanning and listing every 10 seconds
+async def main():
     while True:
-        asyncio.run(scan_and_list_devices())
+        await scan_and_list_devices()
+        await asyncio.sleep(2)
 
 if __name__ == "__main__":
-    main()
+    asyncio.run(main())
