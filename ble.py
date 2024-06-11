@@ -7,9 +7,14 @@ import uuid
 import socket
 import subprocess
 import asyncio
+from requests.exceptions import ConnectionError
 from m1 import manufacturer_codes_1
 from m2 import manufacturer_codes_2
 from m3 import manufacturer_codes_3
+from m4 import manufacturer_codes_4
+from m5 import manufacturer_codes_5
+from m6 import manufacturer_codes_6
+from m7 import manufacturer_codes_7
 from kalman_filter import KalmanFilter
 
 # Merge all manufacturer codes into a single dictionary
@@ -17,6 +22,10 @@ manufacturer_codes = {}
 manufacturer_codes.update(manufacturer_codes_1)
 manufacturer_codes.update(manufacturer_codes_2)
 manufacturer_codes.update(manufacturer_codes_3)
+manufacturer_codes.update(manufacturer_codes_4)
+manufacturer_codes.update(manufacturer_codes_5)
+manufacturer_codes.update(manufacturer_codes_6)
+manufacturer_codes.update(manufacturer_codes_7)
 
 # Kalman filter instance
 kalman_filter = KalmanFilter(1, 1, 1)
@@ -108,7 +117,7 @@ def get_device_uuid():
 def scan_and_list_devices():
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
-    devices = loop.run_until_complete(BleakScanner.discover(timeout=3.0))  # Set a timeout of 10 seconds
+    devices = loop.run_until_complete(BleakScanner.discover(timeout=10.0))  # Set a timeout of 10 seconds
     flattened_devices = []
 
     for device in devices:
@@ -142,9 +151,18 @@ def scan_and_list_devices():
         "devices": flattened_devices
     }
 
-    # Send JSON structure to the webhook
-    response = requests.post("https://zealous-queen-17.webhook.cool", json=result)
-    print(f"Posted data to webhook, response status: {response.status_code}")
+    # Send JSON structure to the webhook with retries
+    for attempt in range(3):
+        try:
+            response = requests.post("https://zealous-queen-17.webhook.cool", json=result)
+            print(f"Posted data to webhook, response status: {response.status_code}")
+            break
+        except ConnectionError as e:
+            print(f"Connection error on attempt {attempt + 1}: {e}")
+            time.sleep(5)
+        except Exception as e:
+            print(f"An error occurred on attempt {attempt + 1}: {e}")
+            time.sleep(5)
 
 # Main function to run the scanning and listing every 5 seconds
 def main():
