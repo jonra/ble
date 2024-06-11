@@ -2,6 +2,7 @@ import requests
 import asyncio
 import json
 import subprocess
+import hashlib
 from bleak import BleakScanner
 from datetime import datetime
 import uuid
@@ -44,6 +45,11 @@ def get_manufacturer_name(manufacturer_data):
         for code in manufacturer_data.keys():
             return manufacturer_codes.get(code, f"Unknown Manufacturer (Code: {code})")
     return "N/A"
+
+# Function to generate a consistent UUID from the device's MAC address
+def generate_uuid_from_mac(mac_address):
+    # Use SHA-256 hash of the MAC address to generate a UUID
+    return str(uuid.UUID(hashlib.sha256(mac_address.encode()).hexdigest()[0:32]))
 
 # Function to get detailed Wi-Fi information
 def get_wifi_info():
@@ -110,13 +116,14 @@ async def scan_and_list_devices():
             continue
 
         device_type = categorize_device(device.name)
+        device_uuid = generate_uuid_from_mac(device.address)
         flattened_devices.append({
             "name": device.name,
             "address": device.address,
             "rssi": rssi,
             "distance": distance,
             "manufacturer": manufacturer_name,
-            "uuid": str(uuid.uuid4()),  # Generate a unique UUID for each device
+            "uuid": device_uuid,  # Use the consistent UUID
             "timestamp": datetime.now().isoformat(),  # Current timestamp
             "category": device_type  # Add category as a field
         })
@@ -135,7 +142,7 @@ async def scan_and_list_devices():
     }
 
     # Send JSON structure to the webhook
-    response = requests.post("https://ble-listener-286f94459e57.herokuapp.com/api/devices", json=result)
+    response = requests.post("https://zealous-queen-17.webhook.cool", json=result)
     print(f"Posted data to webhook, response status: {response.status_code}")
 
 # Main function to run the scanning and listing every 5 seconds
