@@ -6,6 +6,7 @@ from datetime import datetime
 import uuid
 import socket
 import subprocess
+import asyncio
 from requests.exceptions import ConnectionError
 from m1 import manufacturer_codes_1
 from m2 import manufacturer_codes_2
@@ -113,9 +114,9 @@ def get_device_uuid():
         return "Unknown"
 
 # Function to scan for devices and list them grouped by type, excluding Apple devices
-def scan_and_list_devices():
+async def scan_and_list_devices():
     try:
-        devices = asyncio.run(BleakScanner.discover(timeout=3.0))  # Set a timeout of 10 seconds
+        devices = await BleakScanner.discover(timeout=10.0)  # Set a timeout of 10 seconds
     except BleakError as e:
         print(f"Error during Bluetooth scan: {e}")
         return
@@ -169,7 +170,7 @@ def scan_and_list_devices():
 # Main function to run the scanning and listing every 5 seconds
 def main():
     while True:
-        scan_and_list_devices()
+        asyncio.run(scan_and_list_devices())
 
 if __name__ == "__main__":
     main()
