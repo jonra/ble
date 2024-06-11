@@ -1,31 +1,25 @@
 import requests
 import asyncio
 import json
-import subprocess
-import hashlib
 from bleak import BleakScanner
 from datetime import datetime
 import uuid
 import socket
-
-# Import manufacturer codes from the external file
+import subprocess
 from m1 import manufacturer_codes_1
 from m2 import manufacturer_codes_2
 from m3 import manufacturer_codes_3
-from m4 import manufacturer_codes_4
-from m5 import manufacturer_codes_5
-from m6 import manufacturer_codes_6
-from m7 import manufacturer_codes_7
+from kalman_filter import KalmanFilter
 
 # Merge all manufacturer codes into a single dictionary
 manufacturer_codes = {}
 manufacturer_codes.update(manufacturer_codes_1)
 manufacturer_codes.update(manufacturer_codes_2)
 manufacturer_codes.update(manufacturer_codes_3)
-manufacturer_codes.update(manufacturer_codes_4)
-manufacturer_codes.update(manufacturer_codes_5)
-manufacturer_codes.update(manufacturer_codes_6)
-manufacturer_codes.update(manufacturer_codes_7)
+
+# Kalman filter instance
+kalman_filter = KalmanFilter(1, 1, 1)
+
 # Function to categorize devices based on a pattern in their serial numbers
 def categorize_device(name):
     if name and name.startswith("HRM"):  # Example pattern for Heart Rate Monitors
@@ -44,26 +38,6 @@ def categorize_device(name):
         return "Unknown Device"
 
 # Function to estimate distance from RSSI
-class KalmanFilter:
-    def __init__(self, process_variance, measurement_variance, estimated_measurement_variance):
-        self.process_variance = process_variance
-        self.measurement_variance = measurement_variance
-        self.estimated_measurement_variance = estimated_measurement_variance
-        self.posteri_estimate = 0.0
-        self.posteri_error_estimate = 1.0
-
-    def update(self, measurement):
-        priori_estimate = self.posteri_estimate
-        priori_error_estimate = self.posteri_error_estimate + self.process_variance
-
-        blending_factor = priori_error_estimate / (priori_error_estimate + self.measurement_variance)
-        self.posteri_estimate = priori_estimate + blending_factor * (measurement - priori_estimate)
-        self.posteri_error_estimate = (1 - blending_factor) * priori_error_estimate
-
-        return self.posteri_estimate
-
-kalman_filter = KalmanFilter(1, 1, 1)
-
 def estimate_distance(rssi):
     tx_power = -59  # This is a common value, but it may vary
     if rssi == 0:
@@ -82,10 +56,23 @@ def get_manufacturer_name(manufacturer_data):
             return manufacturer_codes.get(code, f"Unknown Manufacturer (Code: {code})")
     return "N/A"
 
-# Function to generate a consistent UUID from the device's MAC address
-def generate_uuid_from_mac(mac_address):
-    # Use SHA-256 hash of the MAC address to generate a UUID
-    return str(uuid.UUID(hashlib.sha256(mac_address.encode()).hexdigest()[0:32]))
+# Function to get internet connection metadata
+def get_connection_metadata():
+    hostname = socket.gethostname()
+    ip_address = socket.gethostbyname(hostname)
+    wifi_info = get_wifi_info()
+    device_uuid = get_device_uuid()
+
+    connection_metadata = {
+        "hostname": hostname,
+        "ip_address": ip_address,
+        "network_name": wifi_info['ssid'] if wifi_info['ssid'] else "Unknown",
+        "network_type": "Wi-Fi" if wifi_info['ssid'] else "Unknown",
+        "mac_address": wifi_info['mac_address'] if wifi_info['mac_address'] else "Unknown",
+        "signal_level": wifi_info['signal_level'] if wifi_info['signal_level'] else "Unknown",
+        "device_uuid": device_uuid
+    }
+    return connection_metadata
 
 # Function to get detailed Wi-Fi information
 def get_wifi_info():
@@ -116,25 +103,7 @@ def get_device_uuid():
         print(f"Error retrieving device UUID: {e}")
         return "Unknown"
 
-# Function to get internet connection metadata
-def get_connection_metadata():
-    hostname = socket.gethostname()
-    ip_address = socket.gethostbyname(hostname)
-    wifi_info = get_wifi_info()
-    device_uuid = get_device_uuid()
-
-    connection_metadata = {
-        "hostname": hostname,
-        "ip_address": ip_address,
-        "network_name": wifi_info['ssid'] if wifi_info['ssid'] else "Unknown",
-        "network_type": "Wi-Fi" if wifi_info['ssid'] else "Unknown",
-        "mac_address": wifi_info['mac_address'] if wifi_info['mac_address'] else "Unknown",
-        "signal_level": wifi_info['signal_level'] if wifi_info['signal_level'] else "Unknown",
-        "device_uuid": device_uuid
-    }
-    return connection_metadata
-
-# Function to scan for devices and list them grouped by type, excluding specific devices
+# Function to scan for devices and list them grouped by type, excluding Apple devices
 async def scan_and_list_devices():
     devices = await BleakScanner.discover()
     flattened_devices = []
@@ -148,18 +117,17 @@ async def scan_and_list_devices():
 
         # Skip devices with specific manufacturer names or name patterns
         if manufacturer_name in ["Apple, Inc.", "Microsoft"] or \
-                any(x in device.name for x in ["Microsoft", "Lynk", "Samsung"]):
+                any(x in device.name for x in ["Microsoft", "Lynk", "Samsung", "ENVY", "Bose"]):
             continue
 
         device_type = categorize_device(device.name)
-        device_uuid = generate_uuid_from_mac(device.address)
         flattened_devices.append({
             "name": device.name,
             "address": device.address,
             "rssi": rssi,
             "distance": distance,
             "manufacturer": manufacturer_name,
-            "uuid": device_uuid,  # Use the consistent UUID
+            "uuid": str(uuid.uuid5(uuid.NAMESPACE_DNS, device.address)),  # Generate a unique UUID for each device
             "timestamp": datetime.now().isoformat(),  # Current timestamp
             "category": device_type  # Add category as a field
         })
@@ -167,18 +135,12 @@ async def scan_and_list_devices():
     connection_metadata = get_connection_metadata()
     result = {
         "timestamp": datetime.now().isoformat(),
-        "hostname": connection_metadata["hostname"],
-        "ip_address": connection_metadata["ip_address"],
-        "network_name": connection_metadata["network_name"],
-        "network_type": connection_metadata["network_type"],
-        "mac_address": connection_metadata["mac_address"],
-        "signal_level": connection_metadata["signal_level"],
-        "device_uuid": connection_metadata["device_uuid"],
+        "connection_metadata": connection_metadata,
         "devices": flattened_devices
     }
 
     # Send JSON structure to the webhook
-    response = requests.post("https://ble-listener-286f94459e57.herokuapp.com/api/devices", json=result)
+    response = requests.post("https://zealous-queen-17.webhook.cool", json=result)
     print(f"Posted data to webhook, response status: {response.status_code}")
 
 # Main function to run the scanning and listing every 5 seconds
