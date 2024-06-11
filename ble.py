@@ -206,7 +206,6 @@ def get_connection_metadata():
     connection_metadata = {
         "hostname": hostname,
         "ip_address": ip_address,
-        "network_name": wifi_info['ssid'] if wifi_info['ssid'] else "Unknown",
         "network_type": "Wi-Fi" if wifi_info['ssid'] else "Unknown",
         "mac_address": wifi_info['mac_address'] if wifi_info['mac_address'] else "Unknown",
         "signal_level": wifi_info['signal_level'] if wifi_info['signal_level'] else "Unknown",
