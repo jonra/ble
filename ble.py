@@ -6,6 +6,7 @@ from datetime import datetime
 import uuid
 import socket
 import subprocess
+import asyncio
 from m1 import manufacturer_codes_1
 from m2 import manufacturer_codes_2
 from m3 import manufacturer_codes_3
@@ -105,7 +106,9 @@ def get_device_uuid():
 
 # Function to scan for devices and list them grouped by type, excluding Apple devices
 def scan_and_list_devices():
-    devices = BleakScanner.discover(timeout=5.0)  # Set a timeout of 10 seconds
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+    devices = loop.run_until_complete(BleakScanner.discover(timeout=3.0))  # Set a timeout of 10 seconds
     flattened_devices = []
 
     for device in devices:
@@ -147,7 +150,7 @@ def scan_and_list_devices():
 def main():
     while True:
         scan_and_list_devices()
-        time.sleep(0)
+        # time.sleep(5)
 
 if __name__ == "__main__":
     main()
