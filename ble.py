@@ -7,8 +7,10 @@ from bleak import BleakScanner
 from datetime import datetime
 import uuid
 import socket
+from filterpy.kalman import KalmanFilter
+import numpy as np
 
-# Import manufacturer codes from the external file
+# Import manufacturer codes from the external files
 from m1 import manufacturer_codes_1
 from m2 import manufacturer_codes_2
 from m3 import manufacturer_codes_3
@@ -44,12 +46,26 @@ def categorize_device(name):
     else:
         return "Unknown Device"
 
-# Function to estimate distance from RSSI
-def estimate_distance(rssi):
+# Function to estimate distance using Kalman filter
+def estimate_distance_kalman(rssi):
+    kf = KalmanFilter(dim_x=1, dim_z=1)
+    kf.x = np.array([0.0])  # Initial state estimate
+    kf.F = np.array([[1.0]])  # State transition matrix
+    kf.H = np.array([[1.0]])  # Measurement function
+    kf.P *= 1000.0  # Covariance matrix
+    kf.R = 5.0  # Measurement noise
+    kf.Q = 0.1  # Process noise
+
     tx_power = -59  # This is a common value, but it may vary
-    if rssi == 0:
+
+    # Kalman filter update with the RSSI value
+    kf.predict()
+    kf.update(np.array([rssi]))
+    rssi_estimate = kf.x[0]
+
+    if rssi_estimate == 0:
         return -1.0  # if we cannot determine accuracy, return -1.
-    ratio = rssi * 1.0 / tx_power
+    ratio = rssi_estimate * 1.0 / tx_power
     if ratio < 1.0:
         return ratio ** 10
     else:
@@ -116,23 +132,13 @@ def get_connection_metadata():
 
 # Function to scan for devices and list them grouped by type, excluding specific devices
 async def scan_and_list_devices():
-    print("Starting Bluetooth scan...")
-    try:
-        devices = await BleakScanner.discover()
-    except Exception as e:
-        print(f"Error during Bluetooth scan: {e}")
-        return
-
-    if not devices:
-        print("No devices found during the scan.")
-        return
-
+    devices = await BleakScanner.discover()
     flattened_devices = []
+
     for device in devices:
-        print(f"Device found: {device.name}, Address: {device.address}")
         advertisement_data = device.details.get("props", {})
         rssi = advertisement_data.get('RSSI', 'N/A')
-        distance = estimate_distance(rssi) if isinstance(rssi, int) else 'N/A'
+        distance = estimate_distance_kalman(rssi) if isinstance(rssi, int) else 'N/A'
         manufacturer_data = advertisement_data.get("ManufacturerData", {})
         manufacturer_name = get_manufacturer_name(manufacturer_data)
 
@@ -154,11 +160,6 @@ async def scan_and_list_devices():
             "category": device_type  # Add category as a field
         })
 
-    if not flattened_devices:
-        print("No devices found after filtering.")
-    else:
-        print(f"Found {len(flattened_devices)} devices after filtering.")
-
     connection_metadata = get_connection_metadata()
     result = {
         "timestamp": datetime.now().isoformat(),
@@ -172,14 +173,9 @@ async def scan_and_list_devices():
         "devices": flattened_devices
     }
 
-    print("Collected Data: ", json.dumps(result, indent=2))  # Print the collected data for debugging
-
     # Send JSON structure to the webhook
-    try:
-        response = requests.post("https://ble-listener-286f94459e57.herokuapp.com/api/devices", json=result)
-        print(f"Posted data to webhook, response status: {response.status_code}")
-    except Exception as e:
-        print(f"Error posting data to webhook: {e}")
+    response = requests.post("https://ble-listener-286f94459e57.herokuapp.com/api/devices", json=result)
+    print(f"Posted data to webhook, response status: {response.status_code}")
 
 # Main function to run the scanning and listing every 5 seconds
 async def main():
