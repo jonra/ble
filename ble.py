@@ -213,15 +213,7 @@ def get_connection_metadata():
 # Function to scan for devices and list them grouped by type, excluding Apple devices
 async def scan_and_list_devices():
     devices = await BleakScanner.discover()
-    categorized_devices = {
-        "Heart Rate Monitor": [],
-        "Thermometer": [],
-        "Blood Pressure Monitor": [],
-        "ENVY Device": [],
-        "Samsung Device": [],
-        "Bose Device": [],
-        "Unknown Device": []
-    }
+    flattened_devices = []
 
     for device in devices:
         advertisement_data = device.details.get("props", {})
@@ -235,21 +227,22 @@ async def scan_and_list_devices():
             continue
 
         device_type = categorize_device(device.name)
-        categorized_devices[device_type].append({
+        flattened_devices.append({
             "name": device.name,
             "address": device.address,
             "rssi": rssi,
             "distance": distance,
             "manufacturer": manufacturer_name,
             "uuid": str(uuid.uuid4()),  # Generate a unique UUID for each device
-            "timestamp": datetime.now().isoformat()  # Current timestamp
+            "timestamp": datetime.now().isoformat(),  # Current timestamp
+            "category": device_type  # Add category as a field
         })
 
     connection_metadata = get_connection_metadata()
     result = {
         "timestamp": datetime.now().isoformat(),
         "connection_metadata": connection_metadata,
-        "devices": categorized_devices
+        "devices": flattened_devices
     }
 
     # Send JSON structure to the webhook
