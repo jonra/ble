@@ -105,7 +105,7 @@ def get_device_uuid():
 
 # Function to scan for devices and list them grouped by type, excluding Apple devices
 def scan_and_list_devices():
-    devices = BleakScanner.discover()
+    devices = BleakScanner.discover(timeout=5.0)  # Set a timeout of 10 seconds
     flattened_devices = []
 
     for device in devices:
@@ -143,11 +143,11 @@ def scan_and_list_devices():
     response = requests.post("https://zealous-queen-17.webhook.cool", json=result)
     print(f"Posted data to webhook, response status: {response.status_code}")
 
-# Main function to run the scanning and listing every 2 seconds
+# Main function to run the scanning and listing every 5 seconds
 def main():
     while True:
         scan_and_list_devices()
-        # time.sleep(5)
+        time.sleep(0)
 
 if __name__ == "__main__":
     main()
