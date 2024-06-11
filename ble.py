@@ -9,8 +9,23 @@ import uuid
 import socket
 
 # Import manufacturer codes from the external file
-from manufacturer_codes import manufacturer_codes
+from m1 import manufacturer_codes_1
+from m2 import manufacturer_codes_2
+from m3 import manufacturer_codes_3
+from m4 import manufacturer_codes_4
+from m5 import manufacturer_codes_5
+from m6 import manufacturer_codes_6
+from m7 import manufacturer_codes_7
 
+# Merge all manufacturer codes into a single dictionary
+manufacturer_codes = {}
+manufacturer_codes.update(manufacturer_codes_1)
+manufacturer_codes.update(manufacturer_codes_2)
+manufacturer_codes.update(manufacturer_codes_3)
+manufacturer_codes.update(manufacturer_codes_4)
+manufacturer_codes.update(manufacturer_codes_5)
+manufacturer_codes.update(manufacturer_codes_6)
+manufacturer_codes.update(manufacturer_codes_7)
 # Function to categorize devices based on a pattern in their serial numbers
 def categorize_device(name):
     if name and name.startswith("HRM"):  # Example pattern for Heart Rate Monitors
