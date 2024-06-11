@@ -117,9 +117,17 @@ def get_connection_metadata():
 # Function to scan for devices and list them grouped by type, excluding specific devices
 async def scan_and_list_devices():
     print("Starting Bluetooth scan...")
-    devices = await BleakScanner.discover()
-    flattened_devices = []
+    try:
+        devices = await BleakScanner.discover()
+    except Exception as e:
+        print(f"Error during Bluetooth scan: {e}")
+        return
 
+    if not devices:
+        print("No devices found during the scan.")
+        return
+
+    flattened_devices = []
     for device in devices:
         print(f"Device found: {device.name}, Address: {device.address}")
         advertisement_data = device.details.get("props", {})
@@ -147,9 +155,9 @@ async def scan_and_list_devices():
         })
 
     if not flattened_devices:
-        print("No devices found during the scan.")
+        print("No devices found after filtering.")
     else:
-        print(f"Found {len(flattened_devices)} devices.")
+        print(f"Found {len(flattened_devices)} devices after filtering.")
 
     connection_metadata = get_connection_metadata()
     result = {
