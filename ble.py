@@ -1,12 +1,11 @@
 import requests
 import time
 import json
-from bleak import BleakScanner
+from bleak import BleakScanner, BleakError
 from datetime import datetime
 import uuid
 import socket
 import subprocess
-import asyncio
 from requests.exceptions import ConnectionError
 from m1 import manufacturer_codes_1
 from m2 import manufacturer_codes_2
@@ -115,15 +114,18 @@ def get_device_uuid():
 
 # Function to scan for devices and list them grouped by type, excluding Apple devices
 def scan_and_list_devices():
-    loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop)
-    devices = loop.run_until_complete(BleakScanner.discover(timeout=10.0))  # Set a timeout of 10 seconds
+    try:
+        devices = asyncio.run(BleakScanner.discover(timeout=3.0))  # Set a timeout of 10 seconds
+    except BleakError as e:
+        print(f"Error during Bluetooth scan: {e}")
+        return
+
     flattened_devices = []
 
     for device in devices:
         advertisement_data = device.details.get("props", {})
-        rssi = advertisement_data.get('RSSI', '999')
-        distance = estimate_distance(rssi) if isinstance(rssi, int) else '999'
+        rssi = advertisement_data.get('RSSI', 'N/A')
+        distance = estimate_distance(rssi) if isinstance(rssi, int) else 'N/A'
         manufacturer_data = advertisement_data.get("ManufacturerData", {})
         manufacturer_name = get_manufacturer_name(manufacturer_data)
 
@@ -168,7 +170,6 @@ def scan_and_list_devices():
 def main():
     while True:
         scan_and_list_devices()
-        # time.sleep(5)
 
 if __name__ == "__main__":
     main()
