@@ -1,7 +1,12 @@
+import requests
 import asyncio
+import json
 from bleak import BleakScanner
+from datetime import datetime
+import uuid
+import socket
 
-# Manufacturer codes dictionary
+# Manufacturer codes dictionary (truncated for brevity)
 manufacturer_codes = {
     0x004C: "Apple, Inc.",
     0x0006: "Microsoft",
@@ -191,6 +196,20 @@ def get_manufacturer_name(manufacturer_data):
             return manufacturer_codes.get(code, f"Unknown Manufacturer (Code: {code})")
     return "N/A"
 
+# Function to get internet connection metadata
+def get_connection_metadata():
+    hostname = socket.gethostname()
+    ip_address = socket.gethostbyname(hostname)
+    # Dummy values for network name and telco ID, replace with actual method to get these
+    network_name = "MyWiFiNetwork"
+    telco_id = "12345"
+    return {
+        "hostname": hostname,
+        "ip_address": ip_address,
+        "network_name": network_name,
+        "telco_id": telco_id
+    }
+
 # Function to scan for devices and list them grouped by type, excluding Apple devices
 async def scan_and_list_devices():
     devices = await BleakScanner.discover()
@@ -216,15 +235,32 @@ async def scan_and_list_devices():
             continue
 
         device_type = categorize_device(device.name)
-        categorized_devices[device_type].append((device.name, device.address, rssi, distance, manufacturer_name))
+        categorized_devices[device_type].append({
+            "name": device.name,
+            "address": device.address,
+            "rssi": rssi,
+            "distance": distance,
+            "manufacturer": manufacturer_name,
+            "uuid": str(uuid.uuid4()),  # Generate a unique UUID for each device
+            "timestamp": datetime.now().isoformat()  # Current timestamp
+        })
 
-    for category, devices in categorized_devices.items():
-        print(f"{category}:")
-        for name, address, rssi, distance, manufacturer_name in devices:
-            distance_str = f"{distance:.2f} meters" if isinstance(distance, float) else distance
-            print(f"  Name: {name}, Address: {address}, RSSI: {rssi}, Distance: {distance_str}, Manufacturer: {manufacturer_name}")
-        print()
+    connection_metadata = get_connection_metadata()
+    result = {
+        "timestamp": datetime.now().isoformat(),
+        "connection_metadata": connection_metadata,
+        "devices": categorized_devices
+    }
 
-# Main function to run the scanning and listing
+    # Send JSON structure to the webhook
+    response = requests.post("https://zealous-queen-17.webhook.cool", json=result)
+    print(f"Posted data to webhook, response status: {response.status_code}")
+
+# Main function to run the scanning and listing every 5 seconds
+async def main():
+    while True:
+        await scan_and_list_devices()
+        await asyncio.sleep(5)
+
 if __name__ == "__main__":
-    asyncio.run(scan_and_list_devices())
+    asyncio.run(main())
