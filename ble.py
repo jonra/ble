@@ -44,10 +44,31 @@ def categorize_device(name):
         return "Unknown Device"
 
 # Function to estimate distance from RSSI
+class KalmanFilter:
+    def __init__(self, process_variance, measurement_variance, estimated_measurement_variance):
+        self.process_variance = process_variance
+        self.measurement_variance = measurement_variance
+        self.estimated_measurement_variance = estimated_measurement_variance
+        self.posteri_estimate = 0.0
+        self.posteri_error_estimate = 1.0
+
+    def update(self, measurement):
+        priori_estimate = self.posteri_estimate
+        priori_error_estimate = self.posteri_error_estimate + self.process_variance
+
+        blending_factor = priori_error_estimate / (priori_error_estimate + self.measurement_variance)
+        self.posteri_estimate = priori_estimate + blending_factor * (measurement - priori_estimate)
+        self.posteri_error_estimate = (1 - blending_factor) * priori_error_estimate
+
+        return self.posteri_estimate
+
+kalman_filter = KalmanFilter(1, 1, 1)
+
 def estimate_distance(rssi):
     tx_power = -59  # This is a common value, but it may vary
     if rssi == 0:
         return -1.0  # if we cannot determine accuracy, return -1.
+    rssi = kalman_filter.update(rssi)
     ratio = rssi * 1.0 / tx_power
     if ratio < 1.0:
         return ratio ** 10
