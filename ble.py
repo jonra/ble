@@ -222,8 +222,9 @@ async def scan_and_list_devices():
         manufacturer_data = advertisement_data.get("ManufacturerData", {})
         manufacturer_name = get_manufacturer_name(manufacturer_data)
 
-        # Skip Apple devices
-        if manufacturer_name == "Apple, Inc.":
+        # Skip devices with specific manufacturer names or name patterns
+        if manufacturer_name in ["Apple, Inc.", "Microsoft"] or \
+                any(x in device.name for x in ["Microsoft", "Lynk", "Samsung"]):
             continue
 
         device_type = categorize_device(device.name)
