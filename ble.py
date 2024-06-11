@@ -200,16 +200,28 @@ def get_manufacturer_name(manufacturer_data):
 def get_connection_metadata():
     hostname = socket.gethostname()
     ip_address = socket.gethostbyname(hostname)
-    # Dummy values for network name and telco ID, replace with actual method to get these
-    network_name = "MyWiFiNetwork"
-    telco_id = "12345"
-    return {
+    wifi_info = "wifi"
+    device_uuid = get_device_uuid()
+
+    connection_metadata = {
         "hostname": hostname,
         "ip_address": ip_address,
-        "network_name": network_name,
-        "telco_id": telco_id
+        "network_name": wifi_info['ssid'] if wifi_info['ssid'] else "Unknown",
+        "network_type": "Wi-Fi" if wifi_info['ssid'] else "Unknown",
+        "mac_address": wifi_info['mac_address'] if wifi_info['mac_address'] else "Unknown",
+        "signal_level": wifi_info['signal_level'] if wifi_info['signal_level'] else "Unknown",
+        "device_uuid": device_uuid
     }
+    return connection_metadata
 
+# Function to get the Linux device UUID
+def get_device_uuid():
+    try:
+        with open("/etc/machine-id", "r") as f:
+            return f.read().strip()
+    except Exception as e:
+        print(f"Error retrieving device UUID: {e}")
+        return "Unknown"
 # Function to scan for devices and list them grouped by type, excluding Apple devices
 async def scan_and_list_devices():
     devices = await BleakScanner.discover()
